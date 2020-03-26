@@ -1,5 +1,5 @@
 #' @export
-f1 <- function(x) x^2
+quadratic <- function(x, a = 1, b = 0) a*x^2+b
 
 sigma <- function(x) 1/(1+exp(-x))
 

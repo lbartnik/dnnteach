@@ -2,23 +2,86 @@
 title: "Simple NN"
 author: "Lukasz A. Bartnik"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  bookdown::html_document2:
+    base_format: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Simple NN}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{knitr::bookdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
 library(knitr)
 
-knitr::opts_chunk$set(collapse = TRUE, comment = NA, prompt = FALSE, echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, comment = NA, prompt = FALSE, echo = TRUE, cache = TRUE)
 ```
+
+```{r}
+library(dnnteach)
+library(ggplot2)
+library(tibble)
+```
+
+
+
+What are the mechanics of optimizing a NN? Let's take a closer look at a very simple NN - in fact, so simple that some people wouldn't even call it a NN - and use it to gain a few insights into what exactly happens during a gradient-descent-based optimization.
+
+Our NN will attempt to follow the outputs of a simple quadratic function (we will, thus, have a single input `x`):
+
+$$f(x) = x^2$$ 
+```{r}
+tibble(x = seq(-5, 5, .1), `f(x)` = quadratic(x)) %>%
+  ggplot() + geom_line(aes(x = x, y = `f(x)`))
+```
+
+
+We will start with a two-neuron NN. Since it is supposed to approximate $f(x)$ we will denote it as $\hat{f}(x)$:
+
+$$
+\begin{equation}
+\hat{f}(x) = \sum_{i=1}^{2} \sigma(w_i x + b_i)
+(\#eq:quadratic)
+\end{equation}
+$$
+where $\sigma(x)$ is the sigmoid function:
+
+$$\sigma(x) = \frac{1}{1 + e^{-x}}$$
+I said that our NN is unusually simple - and it is, as we sum the sigmoids without any weights. Thus, this NN has only four parameters: $(w_1, w_2, b_1, b_2)$!
+
+
+The sigmoid function looks like this:
+
+```{r}
+tibble(x = seq(-6, 6, .1), y = sigma(x)) %>%
+  ggplot() + geom_line(aes(x = x, y = y))
+```
+
+Since we have two of those, my first guess is that the ideal NN would take one as is and the other one reversed along the $x$ axis - like so:
+
+```{r}
+tibble(x = seq(-6, 6, .1), y1 = sigma(x-2), y2 = sigma(-x-2)) %>%
+  ggplot() +
+  geom_line(aes(x = x, y = y1)) +
+  geom_line(aes(x = x, y = y2), color = 'red')
+```
+
+Once summed up according to Equation \@ref(eq:quadratic), we will get something that resembles a quadratic function, at least in the range $(-3, 3)$
+(you might notice that this an equivalent of the following weight values: $w_1=1$, $w_2=-1$, $b_1=b_2=-2$):
+
+```{r}
+tibble(x = seq(-6, 6, .1), y = sigma(x-2) + sigma(-x-2)) %>%
+  ggplot() + geom_line(aes(x = x, y = y))
+```
+
+
+So, what does it take for NN to arrive at this solution?
+
 
 
 ```{r}
 X <- runif(100, -2, 2)
-Y <- f(X) + rnorm(length(X), sd=.1)
+Y <- quadratic(X) + rnorm(length(X), sd=.1)
 ```
 
 ```
