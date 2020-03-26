@@ -5,6 +5,7 @@
 #' @rdname dnnteach
 #'
 #' @importFrom rlang abort warn
+#' @importFrom dplyr %>%
 #'
 #' @references
 #' http://github.com/lbartnik/dnnteach

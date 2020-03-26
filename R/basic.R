@@ -1,6 +1,7 @@
 #' @export
 quadratic <- function(x, a = 1, b = 0) a*x^2+b
 
+#' @export
 sigma <- function(x) 1/(1+exp(-x))
 
 dsigma_dx <- function(x) {
@@ -8,7 +9,8 @@ dsigma_dx <- function(x) {
   s*(1-s)
 }
 
-nn_response <- function(X, w, b) {
+#' @export
+nn_response <- function(X, w, b, epoch) {
   apply(sigma(outer(X,w) + outer(rep.int(1, length(X)), b)), 1, sum)
 }
 
@@ -25,7 +27,7 @@ nn_response <- function(X, w, b) {
 #' @param eta Learning rate.
 #'
 single_step <- function(x, y, w, b, eta) {
-  yhat <- a(x, w, b)
+  yhat <- nn_response(x, w, b)
 
   L <- (yhat-y)^2
   dLda <- 2*(yhat-y)
@@ -60,7 +62,7 @@ epoch <- function(X, Y, w, b, eta) {
     b <<- ans$b
     ans
   })
-  tail(ans, 1)
+  list(w = w, b = b, loss = mean(vapply(ans, `[[`, numeric(1), i = 'loss')))
 }
 
 
@@ -76,22 +78,26 @@ epoch <- function(X, Y, w, b, eta) {
 #'
 #' @export
 #' @importFrom tibble as_tibble
+#' @importFrom dplyr bind_cols
 optimize <- function(X, Y, w, b, eta, epochs) {
   tr <- list()
 
   for(e in seq(epochs)) {
-    et <- epoch(X, Y, w, b, eta)
-    w <- last(et)$w
-    b <- last(et)$b
+    e <- epoch(X, Y, w, b, eta)
+    w <- e$w
+    b <- e$b
 
-    tr <- append(tr, et)
+    tr <- append(tr, list(e))
   }
 
   tr <- lapply(tr, function(p) {
     unlist(p[c("w", "b", "loss")])
   })
 
-  as_tibble(do.call(rbind, tr))
+  bind_cols(
+    epoch = seq(length(tr)),
+    as_tibble(do.call(rbind, tr))
+  )
 }
 
 
@@ -107,7 +113,7 @@ experiment <- function(X, Y, D = 2, w = rnorm(D), b = rnorm(D), eta = 0.002, epo
   trace <- optimize(X, Y, w, b, eta, epochs)
 
   p1 <- plot_response(X, Y, nn_response, epoch = trace[1,])
-  p2 <- plot_response(X, Y, nn_response, tail(trace, 1))
+  p2 <- plot_response(X, Y, nn_response, epoch = tail(trace, 1))
 
   p3 <- trace %>%
     mutate(t = seq_along(w1)) %>%
@@ -120,27 +126,26 @@ experiment <- function(X, Y, D = 2, w = rnorm(D), b = rnorm(D), eta = 0.002, epo
 
   sx <- seq(min(X), max(X), 0.05)
   sd <- lapply(seq(D), function(d) {
-    w <- ans[[paste0("w", d)]]
-    b <- ans[[paste0("b", d)]]
-    sy <- a(sx, w, b)
+    w <- trace[[paste0("w", d)]]
+    b <- trace[[paste0("b", d)]]
+    sy <- nn_response(sx, w, b)
     tibble(x = sx, y = sy, d = as.character(d))
   })
   sd <- do.call(rbind, sd)
   p5 <- ggplot(sd, aes(x = x, y = y, color = d)) + geom_line()
 
   grid.arrange(p1, p2, p3, p5, nrow = 2)
+
+  trace
 }
 
 
 
 #' @importFrom dplyr mutate bind_rows bind_cols
-#' @importFrom tibble tibble expand_grid
+#' @importFrom tibble tibble
+#' @importFrom tidyr expand_grid
 grid <- function(X, Y, b, eta=0.01, epochs=250) {
-  run_no <- 0
-  enumerator <- function() {
-    run_no <<- run_no + 1
-    run_no
-  }
+  enum <- create_enumerator()
 
   w <- seq(-4, 4, 0.1)
   W <- expand_grid(w1 = w, w2 = w)
@@ -156,7 +161,7 @@ grid <- function(X, Y, b, eta=0.01, epochs=250) {
         bind_cols(w, tibble(b1 = b[1], b2 = b[2], stage = 'start', i = 1)),
         trace
       ) %>%
-        mutate(no = enumerator())
+        mutate(no = enum())
     }) %>%
     bind_rows
 }
@@ -177,13 +182,14 @@ grid <- function(X, Y, b, eta=0.01, epochs=250) {
 #' @name reporting
 NULL
 
+
 #' @importFrom dplyr select starts_with
 extract_weights <- function(w, epoch) {
   if (!xor(missing(w), missing(epoch))) {
     abort("Provide `w` or `epoch` but not both at the same time")
   }
   if (!missing(w)) return(w)
-  as.numeric(select(row, starts_with("w")))
+  as.numeric(select(epoch, starts_with("w")))
 }
 
 #' @importFrom dplyr select starts_with
@@ -192,27 +198,39 @@ extract_biases <- function(b, epoch) {
     abort("Provide `b` or `epoch` but not both at the same time")
   }
   if (!missing(b)) return(b)
-  as.numeric(select(row, starts_with("b")))
+  as.numeric(select(epoch, starts_with("b")))
 }
+
 
 #' @rdname reporting
 #' @importFrom tidyr pivot_longer
 #' @importFrom tibble tibble
-#' @importFrom ggplot2 ggplot geom_point aes
-plot_response <- function(X, Y, rsp, w, b, epoch) {
+#' @importFrom dplyr rename
+#' @export
+data_response <- function(X, Y, rsp, w, b, epoch) {
   w <- extract_weights(w, epoch)
-  b <- extract_biases(w, epoch)
+  b <- extract_biases(b, epoch)
 
   yhat <- vapply(X, function(x) rsp(x, w, b), numeric(1))
 
   tibble(x = X, y = Y, yhat) %>%
     pivot_longer(c("y", "yhat")) %>%
-    ggplot(aes(x = x, y = value, color = name)) + geom_point()
+    rename(y = value, type = name)
 }
 
-#' @rdname reporting
-plot_neurons <- function(X, w, b, epoch) {
-  w <- extract_weights(w, epoch)
-  b <- extract_biases(w, epoch)
 
+#' @rdname reporting
+#' @importFrom plyr alply
+#' @importFrom tibble tibble
+#' @export
+data_neurons <- function(X, w, b, epoch) {
+  w <- extract_weights(w, epoch)
+  b <- extract_biases(b, epoch)
+  enum <- create_enumerator()
+
+  tibble(w, b) %>%
+    adply(1, function(row) {
+      tibble(neuron = enum(), x = X, y = sigma(row$w * X + row$b))
+    }) %>%
+    mutate(neuron = as.factor(neuron))
 }

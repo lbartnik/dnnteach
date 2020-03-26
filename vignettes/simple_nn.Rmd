@@ -14,7 +14,7 @@ vignette: >
 ```{r setup, include=FALSE}
 library(knitr)
 
-knitr::opts_chunk$set(collapse = TRUE, comment = NA, prompt = FALSE, echo = TRUE, cache = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, comment = NA, prompt = FALSE, echo = TRUE, cache = TRUE, fig.align = 'center')
 ```
 
 ```{r}
@@ -77,12 +77,67 @@ tibble(x = seq(-6, 6, .1), y = sigma(x-2) + sigma(-x-2)) %>%
 
 So, what does it take for NN to arrive at this solution?
 
+# Random NN weights
 
+Typically, people initialize the weigths of their NNs randomly. Doing so right, though, can be an art and over the years there have been many guidelines how to that best.
+
+We will do the same, but since we have only 4 weights in total, we will not pay to much attention to this step and simply use a Gaussian random variable: $\mathcal{N}(0, 1)$.
+
+```{r}
+set.seed(43)
+
+w <- rnorm(2)
+b <- rnorm(2)
+```
+
+Time to generate the training data set. We will pick $x$ uniformly in $(-2, 2)$ and add a little noise to the output.
 
 ```{r}
 X <- runif(100, -2, 2)
 Y <- quadratic(X) + rnorm(length(X), sd=.1)
 ```
+
+We are ready to run our first gradient-based optimization! We will use learning rate of $\eta=0.01$ and run the optimization for $500$ epochs.
+
+```{r}
+trace <- optimize(X, Y, w, b, eta=0.002, epochs=500)
+```
+
+Let's take a closer look at the epoch-by-epoch trace:
+
+```{r}
+head(trace)
+```
+
+We can start by looking at the loss at the end of each epoch:
+
+```{r}
+ggplot(trace) + geom_line(aes(x = epoch, y = loss))
+```
+
+We can also plot the response of our NN at the beginning and at the end of the optimization:
+
+```{r out.width='90%',fig.width=8,fig.height=5}
+begin <- data_response(X, Y, nn_response, epoch = head(trace, 1))
+end <- data_response(X, Y, nn_response, epoch = tail(trace, 1))
+
+bind_rows(mutate(begin, epoch = 1), mutate(end, epoch = 100)) %>%
+  ggplot() + geom_point(aes(x = x, y = y, color = type)) + facet_wrap(~epoch, nrow = 1)
+```
+
+OK! So the end-state does indeed seem like a better fit to our quadratic function. But why does it have only one slope? We expected to see two...
+
+Let's take a look at what individual neurons look like in both these cases.
+
+```{r out.width='90%',fig.width=8,fig.height=5}
+begin <- data_neurons(X, epoch = head(trace, 1))
+end <- data_neurons(X, epoch = tail(trace, 1))
+
+bind_rows(mutate(begin, epoch = 1), mutate(end, epoch = 100)) %>%
+  ggplot() + geom_line(aes(x = x, y = y, color = neuron)) + facet_wrap(~epoch, nrow = 1)
+```
+
+
 
 ```
 
