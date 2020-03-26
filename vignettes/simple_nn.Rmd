@@ -1,0 +1,108 @@
+---
+title: "Simple NN"
+author: "Lukasz A. Bartnik"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simple NN}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(collapse = TRUE, comment = NA, prompt = FALSE, echo = TRUE)
+```
+
+
+```{r}
+X <- runif(100, -2, 2)
+Y <- f(X) + rnorm(length(X), sd=.1)
+```
+
+```
+
+
+if (FALSE) {
+  experiment(X, Y, epochs = 500, w = c(-2, 2))
+
+  experiment(X, Y, epochs = 1000, D = 2, eta = 0.01)
+}
+
+
+
+if (FALSE) {
+  ANS <- grid(X, Y, c(-1, -1))
+
+  hist(log(ANS$Loss))
+
+  pdf("by_Loss.pdf")
+  ANS %>%
+    mutate(ll = log(Loss)) %>%
+    arrange(ll) %>%
+    a_ply(1, function(ans) {
+      print(result2(X, Y, ans) + ggtitle(ans$ll))
+    })
+  dev.off()
+
+  ANS %>%
+    mutate(ll = log(Loss)) %>%
+    ggplot() +
+    geom_point(aes(x = w1, y = w2, color = ll))
+
+  ANS %>%
+    mutate(ll = log(Loss)) %>%
+    ggplot() +
+    geom_point(aes(x = b1, y = b2, color = ll))
+
+  classify100 <- function(w1, w2) {
+    if (w1 > 3 && w2 < -3) return(1)
+    if (w1 < -3 && w2 > 3) return(1)
+    if (w1 < -3 && w2 < 1) return(2)
+    if (w1 < 1 && w2 < -2) return(2)
+    if (w1 > 2 && abs(w2) < .5) return(3)
+    if (abs(w1) < .5 && w2 > 2) return(3)
+    if (w1 > 2 && w2 > 2) return(4)
+    return(5)
+  }
+
+  classify250 <- function(w1, w2) {
+    if (w1 > 3 && w2 < -3) return(1)
+    if (w1 < -3 && w2 > 3) return(1)
+    if (w1 < -2 && w2 < -2) return(2)
+    if (w1 < -3 && w2 < 1) return(3)
+    if (w1 < 1 && w2 < -3) return(3)
+    if (w1 > 2 && w2 > 2) return(4)
+    #    if (w1 > 3 && abs(w2) < .5) return(4)
+    #    if (abs(w1) < .5 && w2 > 3) return(4)
+    return(6)
+  }
+
+
+  ANS2 <- ANS %>%
+    ddply(.(no), function(run) {
+      run$group <- classify250(tail(run, 1)$w1, tail(run, 1)$w2)
+      run
+    }) %>%
+    mutate(group = as.factor(group))
+
+
+  ANS2 %>%
+    filter(stage == 'finish') %>%
+    ggplot() +
+    geom_point(aes(x = w1, y = w2, color = group))
+
+  ANS2 %>%
+    as_tibble %>%
+    filter(i %% 10 == 0 | stage %in% c("finish", "start")) %>%
+    ggplot() +
+    geom_point(aes(x = w1, y = w2, color = group, size=stage), alpha = .1) +
+    scale_size_manual(values=c(1.3, .05, 1.3)) +
+    scale_shape_manual(values = c(21, 16, 2))
+
+  ggsave("trace_250_dense.pdf", width = 12, height = 10)
+
+
+}
+```

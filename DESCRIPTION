@@ -1,0 +1,26 @@
+Package: dnnteach
+Type: Package
+Title: Variety of teaching materials for DNNs
+Version: 0.1.0
+Authors@R: person("Lukasz", "Bartnik", email = "l.bartnik@gmail.com", role = c("aut", "cre"))
+Description: Variety of teaching materials for DNNs.
+License: MIT + file LICENSE
+URL: https://github.com/lbartnik/dnnteach
+BugReports: https://github.com/lbartnik/subprocess/dnnteach
+Encoding: UTF-8
+LazyData: true
+Depends:
+  R (>= 3.6.0),
+  dplyr,
+  ggplot2,
+  gridExtra,
+  plyr,
+  tibble,
+  tidyr
+Suggests:
+  testthat,
+  knitr,
+  rmarkdown (>= 1.0)
+RoxygenNote: 6.1.1
+Roxygen: list(markdown = TRUE)
+VignetteBuilder: knitr
