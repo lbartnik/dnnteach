@@ -55,14 +55,22 @@ single_step <- function(x, y, w, b, eta) {
 #' @param b Biases of NN.
 #' @param eta Learning rate.
 #'
+#' @importFrom tibble as_tibble
+#' @importFrom dplyr bind_cols
+#'
 epoch <- function(X, Y, w, b, eta) {
-  ans <- lapply(seq(length(X)), function(i) {
+  tr <- lapply(seq(length(X)), function(i) {
     ans <- single_step(X[i], Y[i], w, b, eta)
     w <<- ans$w
     b <<- ans$b
     ans
   })
-  list(w = w, b = b, loss = mean(vapply(ans, `[[`, numeric(1), i = 'loss')))
+
+  tr <- lapply(tr, function(p) {
+    unlist(p[c("w", "b", "loss")])
+  })
+
+  bind_cols(step = seq_along(tr), as_tibble(do.call(rbind, tr)))
 }
 
 
@@ -76,28 +84,20 @@ epoch <- function(X, Y, w, b, eta) {
 #' @param epochs Number of epochs to run gradient descent for.
 #' @return `tibble` with weights, biases and their respective loss at the end of each epoch.
 #'
-#' @export
+#' @importFrom dplyr mutate select
+#' @importFrom plyr ldply
 #' @importFrom tibble as_tibble
-#' @importFrom dplyr bind_cols
+#' @export
 optimize <- function(X, Y, w, b, eta, epochs) {
-  tr <- list()
-
-  for(e in seq(epochs)) {
+  ldply(seq(epochs), function(no) {
     e <- epoch(X, Y, w, b, eta)
-    w <- e$w
-    b <- e$b
+    w <<- extract_weights(epoch = tail(e, 1))
+    b <<- extract_biases(epoch = tail(e, 1))
 
-    tr <- append(tr, list(e))
-  }
-
-  tr <- lapply(tr, function(p) {
-    unlist(p[c("w", "b", "loss")])
-  })
-
-  bind_cols(
-    epoch = seq(length(tr)),
-    as_tibble(do.call(rbind, tr))
-  )
+    tail(e, 1) %>%
+      mutate(epoch = no, loss = mean(e$loss)) %>%
+      select(-step)
+  }) %>% as_tibble
 }
 
 
@@ -220,8 +220,9 @@ data_response <- function(X, Y, rsp, w, b, epoch) {
 
 
 #' @rdname reporting
-#' @importFrom plyr alply
+#' @importFrom plyr adply
 #' @importFrom tibble tibble
+#' @importFrom dplyr mutate
 #' @export
 data_neurons <- function(X, w, b, epoch) {
   w <- extract_weights(w, epoch)

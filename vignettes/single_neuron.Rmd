@@ -1,0 +1,83 @@
+---
+title: "Single Neuron"
+author: "Lukasz A. Bartnik"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    base_format: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Single Neuron}
+  %\VignetteEngine{knitr::bookdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(collapse = TRUE, comment = NA, prompt = FALSE, echo = TRUE, cache = TRUE, fig.align = 'center')
+```
+
+```{r}
+library(dnnteach)
+library(ggplot2)
+library(tibble)
+```
+
+
+```{r}
+set.seed(43)
+
+w <- rnorm(1)
+b <- rnorm(1)
+
+X <- runif(100, -2, 2)
+Y <- quadratic(X) + rnorm(length(X), sd=.1)
+
+trace <- epoch(X, Y, w, b, 0.01)
+```
+
+```{r}
+ggplot(trace) + geom_line(aes(x = step, y = w))
+```
+
+
+
+```{r}
+ldply(seq(-20, 20, 1), function(w) {
+  yhat <- sigma(w*X)
+  loss <- mean((Y-yhat)^2)
+  tibble(w, b = 0, loss = loss)
+}) %>%
+  ggplot(aes(x = w, y = loss)) + geom_point() + geom_line()
+```
+
+
+```{r}
+ldply(seq(-5, 5, 1), function(w) {
+  yhat <- sigma(w*X)
+  loss <- mean((Y-yhat)^2)
+  tibble(w, x = X, yhat, loss = loss)
+}) %>%
+  mutate(w = as.factor(w)) %>%
+  ggplot(aes(x = x, y = yhat)) + geom_line() + facet_grid(. ~ w + round(loss, 2))
+```
+
+
+```{r}
+ldply(seq(-10, 10, .1), function(w) {
+  yhat <- sigma(w*X+0.1)
+  loss <- mean((Y-yhat)^2)
+  tibble(w, b = 1, loss = loss)
+}) %>%
+  ggplot(aes(x = w, y = loss)) + geom_point() + geom_line()
+```
+
+```{r}
+ldply(seq(-20, 20, 1), function(w) {
+  yhat <- sigma(w*X+10)
+  loss <- mean((Y-yhat)^2)
+  tibble(w, x = X, yhat, loss = loss)
+}) %>%
+  mutate(w = as.factor(w)) %>%
+  ggplot(aes(x = x, y = yhat)) + geom_line() + facet_wrap(. ~ w, ncol = 6)
+```

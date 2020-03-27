@@ -21,6 +21,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = NA, prompt = FALSE, echo = TRUE
 library(dnnteach)
 library(ggplot2)
 library(tibble)
+library(dplyr)
 ```
 
 
@@ -139,6 +140,12 @@ bind_rows(mutate(begin, epoch = 1), mutate(end, epoch = 100)) %>%
 
 
 
+# 
+
+
+
+
+```{r}
 ```
 
 

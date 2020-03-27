@@ -1,0 +1,61 @@
+---
+title: "Ideas"
+author: "Lukasz A. Bartnik"
+date: "`r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    base_format: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Ideas}
+  %\VignetteEngine{knitr::bookdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(collapse = TRUE, comment = NA, prompt = FALSE, echo = TRUE, cache = TRUE, fig.align = 'center')
+```
+
+```{r}
+library(dnnteach)
+library(ggplot2)
+library(tibble)
+library(plyr)
+library(dplyr)
+```
+
+
+```{r}
+set.seed(43)
+
+w <- rnorm(1)
+b <- rnorm(1)
+
+X <- runif(100, -2, 2)
+Y <- quadratic(X) + rnorm(length(X), sd=.1)
+```
+
+Let's run the optimization a bunch of times, each time picking initial weights at random,
+sort the runs according to the final loss and plot the solutions.
+
+```{r}
+runs <-
+  ldply(seq(25), function(no) {
+    tr <- optimize(X, Y, w = rnorm(2, sd = 2), b = c(-1, 1), eta = 0.01, epochs = 500)
+    tail(tr, 1) %>% select(-epoch)
+  }) %>%
+  arrange(loss)
+```
+
+
+```{r}
+a_ply(runs, 1, function(run) {
+  p <-
+    data_response(X, Y, nn_response, epoch = run) %>%
+    ggplot() + 
+    geom_point(aes(x = x, y = y, color = type)) + 
+    ggtitle(round(run$loss, 2))
+  print(p)
+})
+```

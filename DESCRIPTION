@@ -21,6 +21,7 @@ Imports:
   tidyr
 Suggests:
   testthat,
+  bookdown,
   knitr,
   rmarkdown (>= 1.0)
 RoxygenNote: 7.1.0
