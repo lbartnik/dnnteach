@@ -11,6 +11,9 @@ dsigma_dx <- function(x) {
 
 #' @export
 nn_response <- function(X, w, b, epoch) {
+  w <- extract_weights(w, epoch)
+  b <- extract_biases(b, epoch)
+
   apply(sigma(outer(X,w) + outer(rep.int(1, length(X)), b)), 1, sum)
 }
 
