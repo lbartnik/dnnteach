@@ -28,7 +28,7 @@ nn_response <- function(X, w, b, epoch) {
 #' @param w Weights of NN.
 #' @param b Biases of NN.
 #' @param eta Learning rate.
-#'
+#' @export
 single_step <- function(x, y, w, b, eta) {
   yhat <- nn_response(x, w, b)
 
@@ -60,7 +60,7 @@ single_step <- function(x, y, w, b, eta) {
 #'
 #' @importFrom tibble as_tibble
 #' @importFrom dplyr bind_cols
-#'
+#' @export
 epoch <- function(X, Y, w, b, eta) {
   tr <- lapply(seq(length(X)), function(i) {
     ans <- single_step(X[i], Y[i], w, b, eta)
@@ -187,6 +187,7 @@ NULL
 
 
 #' @importFrom dplyr select starts_with
+#' @export
 extract_weights <- function(w, epoch) {
   if (!xor(missing(w), missing(epoch))) {
     abort("Provide `w` or `epoch` but not both at the same time")
@@ -196,6 +197,7 @@ extract_weights <- function(w, epoch) {
 }
 
 #' @importFrom dplyr select starts_with
+#' @export
 extract_biases <- function(b, epoch) {
   if (!xor(missing(b), missing(epoch))) {
     abort("Provide `b` or `epoch` but not both at the same time")
